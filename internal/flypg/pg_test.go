@@ -114,6 +114,27 @@ func TestPGConfigInitialization(t *testing.T) {
 		}
 
 	})
+
+	t.Run("citus", func(t *testing.T) {
+		t.Setenv("CITUS_ENABLED", "true")
+		store, _ := state.NewStore()
+
+		if err := pgConf.initialize(store); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := pgConf.CurrentConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expected := "'repmgr,citus'"
+
+		if cfg["shared_preload_libraries"] != expected {
+			t.Fatalf("expected %s, got %s", expected, cfg["shared_preload_libraries"])
+		}
+
+	})
 }
 
 func TestPGUserConfigOverride(t *testing.T) {

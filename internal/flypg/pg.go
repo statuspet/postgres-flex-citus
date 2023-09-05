@@ -156,6 +156,11 @@ func (c *PGConfig) SetDefaults() error {
 		sharedPreloadLibraries = append(sharedPreloadLibraries, "timescaledb")
 	}
 
+	// preload citus if enabled
+	if os.Getenv("CITUS_ENABLED") == "true" {
+		sharedPreloadLibraries = append(sharedPreloadLibraries, "citus")
+	}
+
 	c.internalConfig = ConfigMap{
 		"random_page_cost":         "1.1",
 		"port":                     c.Port,
