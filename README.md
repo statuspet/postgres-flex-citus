@@ -96,6 +96,7 @@ You can then scale each individual app as needed, or add more workers!
 ### TODO
 
 Add a user to .pgpass for the Citus connections, and add a more restrictive entry to pg_bha.conf
+ - This is tricky, the .pgpass needs each worker in it I think
 Add some tests for pg_hba.conf and (when implemented) .pgpass
 
 ## Having trouble?
