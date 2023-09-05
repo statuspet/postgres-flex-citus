@@ -55,10 +55,11 @@ Citus or Fly (at the moment!)
 fly pg create -n <coordinator-app-name>
 
 # Update the app to use the Citus-enabled image
-fly deploy -a <coordinator-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.1
+fly deploy -a <coordinator-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
 
 # Add the extension to your database
 fly pg connect -a <coordinator-app-name>
+> \c db-name
 > CREATE EXTENSION citus;
 ```
 
@@ -68,6 +69,7 @@ Add a couple more apps for a Citus worker
 fly pg create -n <worker1-app-name>
 fly deploy -a <worker1-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
 fly pg connect -a <worker1-app-name>
+> \c db-name
 > CREATE EXTENSION citus;
 ```
 
@@ -75,16 +77,26 @@ fly pg connect -a <worker1-app-name>
 fly pg create -n <worker2-app-name>
 fly deploy -a <worker2-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
 fly pg connect -a <worker2-app-name>
+> \c db-name
 > CREATE EXTENSION citus;
 ```
 
 Then continue as per https://docs.citusdata.com/en/stable/installation/multi_node_debian.html#steps-to-be-executed-on-the-coordinator-node, substituting the hostnames :
 
 ```bash
-coordinator-app-name.flycast
-worker1-app-name.flycast
-worker2-app-name.flycast
+coordinator-app-name.internal
+worker1-app-name.internal
+worker2-app-name.internal
 ```
+
+You can now use the co-ordinator as your DATABASE_URL.
+
+You can then scale each individual app as needed, or add more workers!
+
+### TODO
+
+Add a user to .pgpass for the Citus connections, and add a more restrictive entry to pg_bha.conf
+Add some tests for pg_hba.conf and (when implemented) .pgpass
 
 ## Having trouble?
 Create an issue or ask a question here: https://community.fly.io/
