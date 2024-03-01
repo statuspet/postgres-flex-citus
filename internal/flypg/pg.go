@@ -156,6 +156,11 @@ func (c *PGConfig) SetDefaults() error {
 		sharedPreloadLibraries = append(sharedPreloadLibraries, "timescaledb")
 	}
 
+	// preload citus if enabled
+	if os.Getenv("CITUS_ENABLED") == "true" {
+		sharedPreloadLibraries = append(sharedPreloadLibraries, "citus")
+	}
+
 	c.internalConfig = ConfigMap{
 		"random_page_cost":         "1.1",
 		"port":                     c.Port,
@@ -480,21 +485,34 @@ func (c *PGConfig) setDefaultHBA() error {
 			Address:  "fdaa::/16",
 			Method:   "trust",
 		},
-		{
-			Type:     "host",
-			Database: "all",
-			User:     "all",
-			Address:  "0.0.0.0/0",
-			Method:   "md5",
-		},
-		{
-			Type:     "host",
-			Database: "all",
-			User:     "all",
-			Address:  "::0/0",
-			Method:   "md5",
-		},
 	}
+
+	if os.Getenv("CITUS_ENABLED") == "true" {
+		// append to entries, needs to be before the catch-all authentication entries below.
+		entries = append(entries, HBAEntry{
+			Type:     "host",
+			Database: "all",
+			User:     "all",
+			Address:  "fdaa::/16",
+			Method:   "trust",
+		})
+	}
+
+	entries = append(entries, HBAEntry{
+		Type:     "host",
+		Database: "all",
+		User:     "all",
+		Address:  "0.0.0.0/0",
+		Method:   "md5",
+	})
+
+	entries = append(entries, HBAEntry{
+		Type:     "host",
+		Database: "all",
+		User:     "all",
+		Address:  "::0/0",
+		Method:   "md5",
+	})
 
 	path := fmt.Sprintf("%s/pg_hba.conf", c.DataDir)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0600)

@@ -23,6 +23,7 @@ ENV PGDATA=/data/postgresql
 ARG VERSION
 ARG PG_MAJOR_VERSION
 ARG POSTGIS_MAJOR=3
+ARG CITUS_VERSION=12.0
 ARG HAPROXY_VERSION=2.8
 
 LABEL fly.app_role=postgres_cluster
@@ -31,25 +32,17 @@ LABEL fly.pg-version=${PG_VERSION}
 LABEL fly.pg-manager=repmgr
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    ca-certificates iproute2 curl bash dnsutils vim haproxy socat procps ssh gnupg rsync barman-cli barman barman-cli-cloud cron \
+    ca-certificates iproute2 postgresql-$PG_MAJOR_VERSION-repmgr curl bash dnsutils vim haproxy socat procps ssh gnupg rsync barman-cli barman cron \
     && apt autoremove -y
 
-# Repmgr
-RUN curl -L https://launchpad.net/ubuntu/+archive/primary/+files/postgresql-${PG_MAJOR_VERSION}-repmgr_5.3.3-2_amd64.deb -o postgresql-${PG_MAJOR_VERSION}-repmgr_5.3.3-2_amd64.deb
+# Citus APT setup
+RUN curl https://install.citusdata.com/community/deb.sh | bash
 
-RUN apt-get update && \
-    apt-get install -y ./postgresql-${PG_MAJOR_VERSION}-repmgr_5.3.3-2_amd64.deb \
-    && rm ./postgresql-${PG_MAJOR_VERSION}-repmgr_5.3.3-2_amd64.deb
-
-RUN echo "deb https://packagecloud.io/timescale/timescaledb/debian/ $(cat /etc/os-release | grep VERSION_CODENAME | cut -d'=' -f2) main" > /etc/apt/sources.list.d/timescaledb.list \
-    && curl -L https://packagecloud.io/timescale/timescaledb/gpgkey | apt-key add -
-
-# TimescaleDB and PostGIS
+# Citus and PostGIS
 RUN apt-get update && apt-get install --no-install-recommends -y \
     postgresql-$PG_MAJOR_VERSION-postgis-$POSTGIS_MAJOR \
     postgresql-$PG_MAJOR_VERSION-postgis-$POSTGIS_MAJOR-scripts \
-    timescaledb-2-postgresql-$PG_MAJOR_VERSION \
-    timescaledb-toolkit-postgresql-$PG_MAJOR_VERSION \
+    postgresql-$PG_MAJOR_VERSION-citus-$CITUS_VERSION \
     && apt autoremove -y
 
 # Haproxy
@@ -72,7 +65,7 @@ ADD /config/* /fly/
 RUN mkdir -p /run/haproxy/
 RUN usermod -d /data postgres
 
-ENV TIMESCALEDB_ENABLED=true
+ENV CITUS_ENABLED=true
 
 EXPOSE 5432
 

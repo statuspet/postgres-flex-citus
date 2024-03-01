@@ -19,7 +19,7 @@ For HA, it's recommended that you run at least 3 members within your primary reg
 
 ## Horizontal scaling
 Use the clone command to scale up your cluster.
-```
+```bash
 # List your active Machines
 fly machines list --app <app-name>
 
@@ -30,7 +30,7 @@ fly machines clone <machine-id> --region <target-region>
 ## Staying up-to-date!
 This project is in active development so it's important to stay current with the latest changes and bug fixes.
 
-```
+```bash
 # Use the following command to verify you're on the latest version.
 fly image show --app <app-name>
 
@@ -42,9 +42,62 @@ fly image update --app <app-name>
 ## TimescaleDB support
 We currently maintain a separate TimescaleDB-enabled image that you can specify at provision time.
 
-```
+```bash
 fly pg create  --image-ref flyio/postgres-flex-timescaledb:15
 ```
+
+## Citus support
+This repository contains unofficial support for Citus (https://www.citusdata.com/).  This isn't supported by either
+Citus or Fly (at the moment!)
+
+```bash
+# Create the pg app - using whatever arguments you desire
+fly pg create -n <coordinator-app-name>
+
+# Update the app to use the Citus-enabled image
+fly deploy -a <coordinator-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
+
+# Add the extension to your database
+fly pg connect -a <coordinator-app-name>
+> \c db-name
+> CREATE EXTENSION citus;
+```
+
+Add a couple more apps for a Citus worker
+
+```bash
+fly pg create -n <worker1-app-name>
+fly deploy -a <worker1-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
+fly pg connect -a <worker1-app-name>
+> \c db-name
+> CREATE EXTENSION citus;
+```
+
+```bash
+fly pg create -n <worker2-app-name>
+fly deploy -a <worker2-app-name> --dockerfile Dockerfile-citus --build-arg VERSION=v0.0.43
+fly pg connect -a <worker2-app-name>
+> \c db-name
+> CREATE EXTENSION citus;
+```
+
+Then continue as per https://docs.citusdata.com/en/stable/installation/multi_node_debian.html#steps-to-be-executed-on-the-coordinator-node, substituting the hostnames :
+
+```bash
+coordinator-app-name.internal
+worker1-app-name.internal
+worker2-app-name.internal
+```
+
+You can now use the co-ordinator as your DATABASE_URL.
+
+You can then scale each individual app as needed, or add more workers!
+
+### TODO
+
+Add a user to .pgpass for the Citus connections, and add a more restrictive entry to pg_bha.conf
+ - This is tricky, the .pgpass needs each worker in it I think
+Add some tests for pg_hba.conf and (when implemented) .pgpass
 
 ## Having trouble?
 Create an issue or ask a question here: https://community.fly.io/
