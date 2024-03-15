@@ -36,8 +36,55 @@ fly image show --app <app-name>
 
 # Update your Machines to the latest version.
 fly image update --app <app-name>
-
 ```
+
+## PostgreSQL 16
+
+Because Fly doesn't have a PostgreSQL 16 image to use as the basis for a new cluster, and that updating from PostgreSQL 15
+to 16 isn't automatic, the process of getting a cluster up is a bit different.
+
+First, you need Docker running locally, and a Docker account.  You'll be pushing a Docker image to Docker Hub to use
+when you create your cluster.
+
+### Build the Docker image
+
+Use a script like the below, setting your Docker username
+
+```bash
+#!/bin/bash
+set -e
+
+VERSION=v0.0.50
+DOCKER_USERNAME=<here>
+
+docker build -f Dockerfile-pg16 \
+             -t ${DOCKER_USERNAME}/postgres-16-flex \
+             -t ${DOCKER_USERNAME}/postgres-16-flex:$VERSION \
+             --build-arg VERSION=$VERSION \
+             . \
+             --platform "linux/amd64"
+
+docker push ${DOCKER_USERNAME}/postgres-16-flex:$VERSION
+docker push ${DOCKER_USERNAME}/postgres-16-flex
+```
+
+(Pushing the versioned tag is optional, if you want to omit that.)
+
+You'll then need to go to Docker Hub and set the `postgres-16-flex` repository as public.
+
+### Create a cluster using the image
+
+The rest of the process is per above, just supplying your image to the pg create command.
+
+```bash
+fly pg create --image-ref your-username/postgres-16-flex --name <app-name> --initial-cluster-size 3 --region ord --flex
+```
+
+### Updating the cluster
+
+You're responsible for updating your own image now, of course.  Rebuild the Docker image using the above script,
+bumping the version number.  Once you've pushed your new build, you can use the "Staying up-to-date!" section above to 
+update your cluster.
 
 ## TimescaleDB support
 We currently maintain a separate TimescaleDB-enabled image that you can specify at provision time.
